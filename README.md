@@ -161,7 +161,7 @@ INTIGRITI{01a09f56-74a2-700b-a849-ffe6742327b2}
 
 ## 👤 Author
 
-**[TOFAZZEN HOSSEN TOPU]**
+**[TOFAZZEL HOSSEN TOPU]**
 🔗 GitHub: `@xpl01t-z3r0 ` · 🐦 
 
 *Solved as part of Intigriti's monthly web challenge series — September 2026.*
