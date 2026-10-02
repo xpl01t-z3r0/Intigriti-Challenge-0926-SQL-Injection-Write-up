@@ -27,13 +27,7 @@
   - [4. Column Enumeration](#4-column-enumeration)
   - [5. Flag Extraction](#5-flag-extraction)
 - [Flag](#-flag)
-- [Root Cause](#-root-cause)
-- [Proof of Concept — Vulnerable vs. Fixed Code](#-proof-of-concept--vulnerable-vs-fixed-code)
-- [Remediation](#-remediation)
-- [Timeline](#-timeline)
-- [Key Takeaways](#-key-takeaways)
-- [References](#-references)
-- [Author](#-author)
+
 
 ---
 
@@ -164,82 +158,6 @@ INTIGRITI{01a09f56-74a2-700b-a849-ffe6742327b2}
 
 ---
 
-## 🧬 Root Cause
-
-The `pic` parameter is Base64-decoded server-side and concatenated **directly** into a SQL query string, with no parameterization, prepared statements, or input validation. The Base64 wrapper is purely cosmetic obfuscation and provides no actual security benefit — any value that decodes to valid SQL is executed as-is.
-
----
-
-## 🧩 Proof of Concept — Vulnerable vs. Fixed Code
-
-**Likely vulnerable implementation (illustrative, PHP):**
-
-```php
-// VULNERABLE: raw string concatenation
-$pic = base64_decode($_GET['pic']);
-$query = "SELECT image_path FROM gallery WHERE name = '$pic'";
-$result = mysqli_query($conn, $query);
-```
-
-**Fixed implementation using prepared statements:**
-
-```php
-// SAFE: parameterized query
-$pic = base64_decode($_GET['pic']);
-$stmt = $conn->prepare("SELECT image_path FROM gallery WHERE name = ?");
-$stmt->bind_param("s", $pic);
-$stmt->execute();
-$result = $stmt->get_result();
-```
-
-The fix separates **data** from **code** — the database driver sends `$pic` as a literal value, never as part of the SQL syntax, which neutralizes injection regardless of what the decoded string contains.
-
----
-
-## 🛡️ Remediation
-
-- Use **parameterized queries / prepared statements** for all database access — never build SQL via string concatenation.
-- Apply **strict allow-list validation** on decoded input (e.g. expect only a filename or numeric ID, reject anything else).
-- Run the database user with **least-privilege** access (no visibility into `information_schema`, no unnecessary schema access).
-- Add a **WAF rule** or input filter for common SQLi tokens as defense-in-depth (not a substitute for parameterized queries).
-- Log and alert on malformed/unexpected decoded input to catch probing attempts early.
-
----
-
-## ⏱️ Timeline
-
-| Stage | Action |
-|---|---|
-| 1 | Identified Base64-encoded `pic` parameter |
-| 2 | Confirmed injection with syntax-breaking payload |
-| 3 | Fingerprinted column count via `UNION SELECT` |
-| 4 | Enumerated database tables |
-| 5 | Enumerated target table's columns |
-| 6 | Extracted flag from `secret_vault.note` |
-
----
-
-## 📝 Key Takeaways
-
-| Step | Goal | Technique |
-|---|---|---|
-| 1 | Confirm injection point | Syntax break with `'-- -` |
-| 2 | Determine column count | `UNION SELECT` |
-| 3 | Enumerate tables | `information_schema.tables` |
-| 4 | Enumerate columns | `information_schema.columns` |
-| 5 | Extract data | `UNION SELECT` on target column |
-
-> Encoding (like Base64) is **not** encryption and should never be relied on as a security control — it only changes representation, not meaning. Always validate and parameterize at the point where user input meets a query, regardless of how it arrives on the wire.
-
----
-
-## 📚 References
-
-- [OWASP: SQL Injection](https://owasp.org/www-community/attacks/SQL_Injection)
-- [PortSwigger Web Security Academy: SQL Injection](https://portswigger.net/web-security/sql-injection)
-- [Intigriti Challenges](https://challenges.intigriti.io/)
-
----
 
 ## 👤 Author
 
